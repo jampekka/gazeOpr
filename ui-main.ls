@@ -5,13 +5,14 @@ require! './gazeSimulation.ls'
 
 $ ->
 	sim = gazeSimulation.SignalSimulator duration: 10
-	{ts, gaze, target} = sim!
+	{ts, gaze, target, signal} = sim!
 	mplot.Plot!
-		..plot ts, zipAll(...target)[0]
+		..plot ts, zipAll(...gaze)[0]
+		..scatter ts, zipAll(...signal)[0]
 		..show $ '#main-plot'
 
 	speedDist = sim.target.speedDist
 	mplot.Plot!
-		..plot rng=[0 to 20 by 0.1], map speedDist~pdf, rng
+		..plot rng=[0 to 30 by 0.1], speedDist~cdf `map` rng
 		..show $ '#tmp-plot'
 

@@ -26,7 +26,6 @@ sqrt = pow _, 0.5
 sum = fold (+), 0, _
 norm = (a) -> sqrt sum (pow a, 2)
 
-
 export LinearPursuit = fobj (@x0, @x1, @speed) ->
 	@t = 0
 	@targetT = div (norm sub @x1, @x0), @speed
@@ -55,21 +54,37 @@ MixtureDistribution = fobj (@dists, @weights=[1]*@dists.length) ->
 	totalWeight = sum @weights
 	@weights = map (/totalWeight), @weights
 	@randomDistribution = RandomSampler @weights, @dists
-	
+
 	wrap = (fname) ~> (...args) ~>
 		raw = map ((d) -> d[fname] ...args), @dists
 		sum mul raw, @weights
 
-	@pdf = wrap "pdf"
-	@cdf = wrap "cdf"
+	@pdf = wrap \pdf
+	@cdf = wrap \cdf
 
 	@sample = ~>
 		@randomDistribution! .sample!
+
+NdDistribution = fobj (@dDists=[]) ->
+	wrap = (fname) ~> (...args) ~>
+		# TODO: Not very nice
+		subargs = zipAll ...(args)
+		for d, i in @dDists
+			d[fname] ...subargs[i]
+
+	@pdf = wrap \cdf
+	@cdf = wrap \cdf
+	@sample = wrap \sample
 
 DeltaDistribution = fobj (@value) ->
 	@pdf = (x) ~>
 		| x == @value => Infinity
 		| _ => 0
+
+	@cdf = (x) ~>
+		| x < @value => 0
+		| _ => 1
+
 	@sample = ~> @value
 
 # TODO: Estimate the pursuits from literature
@@ -120,16 +135,22 @@ export BesselEyeDynamics = ({dt,order=3,cutoff=3.0}) ->
 		filtered = map filt~simulate, axes
 		zipAll ...filtered
 
+NdNormNoise = (noiseStds) ->
+	NdDistribution ((s) -> jStat.normal(0, s)) `map` noiseStds
+
 export SignalSimulator = fobj ({
 	@dt=0.01, @duration=60.0,
 	@target=RandomLinearMovementSimulator!
 	@dynamics=BesselEyeDynamics dt: @dt
+	@noise=NdNormNoise [0.5]*2
 		}={}) ->
 	p = @
 	fobj (@duration=p.duration) ->
 		@simulator = p
 		@ts = [0 to @duration by p.dt]
 		# TODO: Seems to go to infinite loop with empty ts
-		@target = map (~> p.target(p.dt)), @ts
+		@target = (-> p.target(p.dt)) `map` @ts
 		@gaze = p.dynamics @target
+		@signal = ((x) -> add x, p.noise.sample!) `map` @gaze
+		console.log @signal
 

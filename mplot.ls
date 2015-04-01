@@ -6,6 +6,8 @@ require! 'element-resize-event'
 {zip, zipObj, map} = require "ramda"
 require! './fobj.ls'
 
+denew = (cls) -> (...args) -> new cls ...args
+
 export Plot = fobj ->
 	@plots = []
 	@xScale = new Plottable.Scale.Linear
@@ -13,12 +15,19 @@ export Plot = fobj ->
 	@yScale = new Plottable.Scale.Linear
 	@yAxis = new Plottable.Axis.Numeric @yScale, "left"
 
-	@plot = (x, y) ~>
-		plot = new Plottable.Plot.Line @xScale, @yScale
+	@_baseplot = (cls, x, y, opts={}) ~>
+		plot = cls @xScale, @yScale
 			..addDataset map zipObj([\x,\y], _), zip(x, y)
 			..project \x, \x, @xScale
 			..project \y, \y, @yScale
-		@plots.push plot
+
+	@plot = (...args) ~>
+		@_baseplot (denew Plottable.Plot.Line), ...args
+			@plots.push ..
+
+	@scatter = (...args) ~>
+		@_baseplot (denew Plottable.Plot.Scatter), ...args
+			@plots.push ..
 
 	@show = (el) ~>
 		plots = new Plottable.Component.Group @plots
