@@ -4,30 +4,29 @@ plottable = require 'script!plottable.js/plottable.js'
 plottable = require 'plottable.js/plottable.css'
 require! 'element-resize-event'
 {zip, zipObj, map} = require "ramda"
+require! './fobj.ls'
 
-export class Plot
-	->
-			@plots = []
-			@xScale = new Plottable.Scale.Linear
-			@xAxis = new Plottable.Axis.Numeric @xScale, "bottom"
+export Plot = fobj ->
+	@plots = []
+	@xScale = new Plottable.Scale.Linear
+	@xAxis = new Plottable.Axis.Numeric @xScale, "bottom"
+	@yScale = new Plottable.Scale.Linear
+	@yAxis = new Plottable.Axis.Numeric @yScale, "left"
 
-			@yScale = new Plottable.Scale.Linear
-			@yAxis = new Plottable.Axis.Numeric @yScale, "left"
-
-	plot: (x, y) ~>
+	@plot = (x, y) ~>
 		plot = new Plottable.Plot.Line @xScale, @yScale
 			..addDataset map zipObj([\x,\y], _), zip(x, y)
 			..project \x, \x, @xScale
 			..project \y, \y, @yScale
 		@plots.push plot
 
-	show: (el) ~>
+	@show = (el) ~>
 		plots = new Plottable.Component.Group @plots
 		renderer = new Plottable.Component.Table [
 			[null, null, null],
 			[null, @yAxis, plots],
 			[null, null, @xAxis]]
-		
+
 		el.find("svg.mplot-canvas").remove()
 		svg = $("<svg class='mplot-canvas'>").appendTo el
 		# Every. Single. Time. Getting really bored with these resize hacks.

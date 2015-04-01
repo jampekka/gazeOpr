@@ -1,6 +1,8 @@
 {
   "dependencies": {},
   "devDependencies": {
+    "bower": "^1.4.0",
+    "fili": "git://github.com/markert/fili.js",
     "jquery": "^2.1.3"
   }
 }
