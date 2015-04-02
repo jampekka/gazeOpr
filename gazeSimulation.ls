@@ -1,5 +1,6 @@
 {zipWith, fold, map, zipAll, values, findIndex} = require "prelude-ls"
 require! "./fobj.ls"
+require "./vmath.ls"
 
 # Probably polluting the namespace :(
 require 'script!jStat/dist/jstat.js'
@@ -8,23 +9,7 @@ require 'script!jStat/dist/jstat.js'
 # TODO: Fili seems to export stuff, but doesn't seem
 # to work with a simple require
 require 'script!fili/dist/fili.js'
-
-isScalar = (v) -> typeof v == 'number'
-
-cwise = (f) --> (a, b) ->
-	| isScalar a and isScalar b => f a, b
-	| isScalar a => map f(a, _), b
-	| isScalar b => map f(_, b), a
-	| _ => zipWith f, a, b
-
-add = cwise (+)
-sub = cwise (-)
-mul = cwise (*)
-div = cwise (/)
-pow = cwise (**)
-sqrt = pow _, 0.5
-sum = fold (+), 0, _
-norm = (a) -> sqrt sum (pow a, 2)
+for name, val of require './vmath.ls' then eval "var #name = val"
 
 export LinearPursuit = fobj (@x0, @x1, @speed) ->
 	@t = 0
@@ -120,7 +105,7 @@ export RandomLinearMovementSimulator = fobj ({
 # Table 1 of "Variability and development of a normative
 # data base for saccadic eye movements", Bahill et al 1989.
 # TODO: ESTIMATE AGAIN FOR FILI!!!
-export BesselEyeDynamics = ({dt,order=3,cutoff=3.0}) ->
+export BesselEyeDynamics = ({dt,order=3,cutoff=11.0}) ->
 	coeffs = (new CalcCascades) .lowpass do
 		order: order
 		characteristic: 'bessel'
@@ -139,7 +124,7 @@ NdNormNoise = (noiseStds) ->
 	NdDistribution ((s) -> jStat.normal(0, s)) `map` noiseStds
 
 export SignalSimulator = fobj ({
-	@dt=0.01, @duration=60.0,
+	@dt=0.001, @duration=60.0,
 	@target=RandomLinearMovementSimulator!
 	@dynamics=BesselEyeDynamics dt: @dt
 	@noise=NdNormNoise [0.5]*2
@@ -151,6 +136,5 @@ export SignalSimulator = fobj ({
 		# TODO: Seems to go to infinite loop with empty ts
 		@target = (-> p.target(p.dt)) `map` @ts
 		@gaze = p.dynamics @target
-		@signal = ((x) -> add x, p.noise.sample!) `map` @gaze
-		console.log @signal
+		@measurement = ((x) -> add x, p.noise.sample!) `map` @gaze
 

@@ -40,9 +40,13 @@ export Plot = fobj ->
 		svg = $("<svg class='mplot-canvas'>").appendTo el
 		# Every. Single. Time. Getting really bored with these resize hacks.
 		# Every time anybody writes writes 'px' or similar to any library,
-		# a finger should be cut off.	
+		# a finger should be cut off.
 		resize = ->
 			svg.css width: el.width(), height: el.height()
-			renderer.renderTo d3.selectAll svg
+			renderer.redraw()
+
+		svg.css width: el.width(), height: el.height()
+		renderer.renderTo d3.selectAll svg
 		resize()
+		# TODO: Doesn't actually trigger on element resize
 		elementResizeEvent el[0], resize
