@@ -43,3 +43,44 @@ export
 
 		(ts) ~>
 			cmap @interpOne, ts
+
+	IncSs = fobj ->
+		@n = 0
+		@m = 0
+		@ss = 0
+
+		(x) ~>
+			@n += 1
+			@d = sub x, @m
+			@m = add @m, (div @d, @n)
+			@ss = add @ss, (mul @d, (sub x, @m))
+
+	LinearFit = fobj (ts, xs) ->
+		@t = IncSs!
+		@x = IncSs!
+		@n = 0
+		coSs = 0
+
+		@inc = (t, x) ~>
+			@t t
+			@x x
+			@n = @t.n
+			w = (@n - 1) / @n
+			coSs := add coSs, (mul w, (mul @t.d, @x.d))
+
+		@residualSs = ~>
+			add @x.ss, (div (pow coSs, 2), @t.ss)
+
+		@coeffs = ~>
+			b = div coSs, @t.ss
+			a = sub @x.m, (mul b, @t.m)
+			return [a, b]
+
+		if xs?
+			for [t, x] in zipAll ts, xs
+				@inc t, x
+
+		(t) ~>
+			[a, b] = @coeffs!
+			return add a, (mul t, b)
+
