@@ -51,9 +51,9 @@ export
 
 		(x) ~>
 			@n += 1
-			@d = sub x, @m
-			@m = add @m, (div @d, @n)
-			@ss = add @ss, (mul @d, (sub x, @m))
+			d = sub x, @m
+			@m = add @m, (div d, @n)
+			@ss = add @ss, (mul d, (sub x, @m))
 
 	LinearFit = fobj (ts, xs) ->
 		@t = IncSs!
@@ -62,11 +62,12 @@ export
 		coSs = 0
 
 		@inc = (t, x) ~>
+			prevDt = t - @t.m
 			@t t
 			@x x
 			@n = @t.n
-			w = (@n - 1) / @n
-			coSs := add coSs, (mul w, (mul @t.d, @x.d))
+			dx = sub x, @x.m
+			coSs := add coSs, (mul prevDt, dx)
 
 		@residualSs = ~>
 			add @x.ss, (div (pow coSs, 2), @t.ss)
