@@ -1,4 +1,4 @@
-{map, filter, maximumBy} = require 'prelude-ls'
+{map, filter, maximumBy, unique} = require 'prelude-ls'
 require! './fobj.ls'
 for name, val of require './vmath.ls' then eval "var #name = val"
 
@@ -84,8 +84,25 @@ export Nols = fobj (noiseStd) ->
 
 #bruteNolp = (ts, gaze) ->
 
+memoize = (f) ->
+	cache = {}
+	(x) ->
+		if x not of cache
+			cache[x] = f x
+		return cache[x]
 
-export Reconstruct = fobj (@splits, @ts, @gaze) ->
-	# TODO: NO NO NO!
-	splits = [@ts[0]] ++ @splits ++ [@ts[*-1]]
-	LinInterp splits, (LinInterp(@ts, @gaze) splits)
+export PiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
+	@splits = unique @splits
+	subfit = memoize (endI) ~>
+		startT = @splits[endI - 1]
+		start = searchAscendingFirst @splits, startT
+		endT = @splits[endI]
+		end = (searchAscendingFirst (@ts.slice start), endT) + start
+		return LinearFit @ts.slice(start, end), @xs.slice(start, end)
+
+	@predictOne = (t) ~>
+		fit = subfit (searchAscendingLast(@splits, t))
+		return fit(t)
+
+	(ts) ~>
+		cmap @predictOne, ts

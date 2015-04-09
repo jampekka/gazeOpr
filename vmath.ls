@@ -24,9 +24,13 @@ export
 
 	getDim = (d) -> map (x) -> x[d]
 
-	searchAscending = (ts, t) -->
+	searchAscendingLast = (ts, t) -->
 		# TODO: Could use binary or interpolation search
-		findIndex (>= t), ts
+		(findIndex (> t), ts) ? ts.length
+
+	searchAscendingFirst = (ts, t) -->
+		# TODO: Could use binary or interpolation search
+		(findIndex (>= t), ts) ? ts.length
 
 	LinInterp = fobj (@ts, @xs) ->
 		ts = @ts

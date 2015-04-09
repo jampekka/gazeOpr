@@ -24,14 +24,15 @@ test "mplot", ->
 
 test "Linear fit", ->
 	require! './mplot.ls'
-	{add, LinearFit} = require './vmath.ls'
+	{mul, add, LinearFit} = require './vmath.ls'
 	# Probably polluting the namespace :(
 	require 'script!jStat/dist/jstat.js'
 
 	x = [0 to 10 by 0.1]
-	noiser = -> jStat.normal(0, 1.0).sample!
+	noiser = -> jStat.normal(0, 0.0).sample!
 	noise = map noiser, x
-	y = add x, noise
+	y = mul x, 10
+	y = add y, noise
 
 	fit = LinearFit x, y
 	console.log fit.coeffs!

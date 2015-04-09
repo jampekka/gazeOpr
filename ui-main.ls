@@ -3,10 +3,11 @@ require! './mplot.ls'
 require! './gazeSimulation.ls'
 {map, zipAll} = require 'prelude-ls'
 {LinInterp, getDim, add, mul} = require './vmath.ls'
-{VelocityThreshold, Reconstruct, Nols} = require './segmentation.ls'
+{VelocityThreshold, PiecewiseLinearFit, Nols} = require './segmentation.ls'
 
 require! mersennetwister
-Math.random = (new mersennetwister)~random
+seed = 0
+Math.random = (new mersennetwister seed)~random
 
 $ ->
 	$ '#tmp-plot' .hide!
@@ -15,10 +16,10 @@ $ ->
 	{ts, gaze, target, measurement} = sim!
 
 	ts = [0 til 1 by 0.01]
-	gaze = [[0.0, 0.0]]*ts.length
-	g = mul ts, 10.0
-	gaze = zipAll g, g
-	measurement = map ((x) -> add x, sim.noise.sample!), gaze
+	#gaze = [[0.0, 0.0]]*ts.length
+	g = mul ts, 1.0
+	#gaze = zipAll g, g
+	#measurement = map ((x) -> add x, sim.noise.sample!), gaze
 
 	#result = Reconstruct VelocityThreshold!, ts, measurement
 
@@ -27,7 +28,8 @@ $ ->
 		nols.measurement t, x
 
 	console.log nols.splits!
-	result = Reconstruct nols.splits!, ts, measurement
+	result = PiecewiseLinearFit nols.splits!, ts, measurement
+	console.log (getDim 0) result(ts)
 
 	mplot.Plot!
 		..plot ts, (getDim 0) gaze
