@@ -17,14 +17,17 @@ export VelocityThreshold = fobj (@threshold=10) ->
 				splits.push ts[i - 1]
 		return splits
 
-export Nols = fobj (noiseStd) ->
+denan = (v) ->
+	| v == v => v
+	| _ => void
+
+export NaiveOls = fobj (noiseStd) ->
 	nDim = noiseStd.length
 	nParam = 2
-	# Akaike information criterion.
-	# TODO: Verify this is really Akaike and verify
-	#	it converges to proper noise estimate
+	# Akaikish information criterion.
+	# TODO: Figure out more principled stuff here
 	splitLikelihood = ->
-		-nParam*nDim
+		-2*nParam*nDim
 
 	fitLikelihood = (f) ->
 		if f.n < nParam
@@ -56,17 +59,21 @@ export Nols = fobj (noiseStd) ->
 			@myLikelihood = fitLikelihood @fit
 
 		@likelihood = ~>
-			@pastLikelihood + @myLikelihood
+			denan @pastLikelihood + @myLikelihood
+
+		@minSurvivableLik = ~>
+			denan @likelihood! + splitLikelihood!
 
 	@hypotheses = [Hypothesis!]
 
 	i = 0
 	@measurement = (t, x) ~>
-		leader = maximumBy (.likelihood!), @hypotheses
-		@hypotheses.push Hypothesis leader
-
-		#pruneLimit = totalLikelihood newHypothesis
-		#@hypotheses = filter ((h) -> totalLikelihood(h) > pruneLimit), @hypotheses
+		candidates = filter (.likelihood!?), @hypotheses
+		leader = maximumBy (.likelihood!), candidates
+		if leader?
+			pruneLimit = leader.minSurvivableLik!
+			@hypotheses = filter ((h) -> not (h.likelihood! < pruneLimit)), @hypotheses
+			@hypotheses.push Hypothesis leader
 
 		for h in @hypotheses
 			h.measurement t, x
@@ -94,7 +101,6 @@ memoize = (f) ->
 export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	@splits = unique @splits
 	subfit = (endI) ~>
-		# TODO: Something still amiss here!
 		startT = @splits[endI - 1]
 		start = searchAscendingFirst @ts, startT
 		endT = @splits[endI]
