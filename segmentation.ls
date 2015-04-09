@@ -93,15 +93,16 @@ memoize = (f) ->
 
 export PiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	@splits = unique @splits
-	subfit = memoize (endI) ~>
+	subfit = (endI) ~>
 		# TODO: Something still amiss here!
 		startT = @splits[endI - 1]
-		start = searchAscendingFirst @splits, startT
+		start = searchAscendingFirst @ts, startT
 		endT = @splits[endI]
 		end = (searchAscendingFirst (@ts.slice start), endT) + start
 		return LinearFit @ts.slice(start, end), @xs.slice(start, end)
 
 	@predictOne = (t) ~>
+		console.log "t", t
 		fit = subfit (searchAscendingLast(@splits, t))
 		return fit(t)
 
