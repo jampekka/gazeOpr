@@ -3,7 +3,7 @@ require! './mplot.ls'
 require! './gazeSimulation.ls'
 {map, zipAll} = require 'prelude-ls'
 {LinInterp, getDim, add, mul} = require './vmath.ls'
-{VelocityThreshold, PiecewiseLinearFit, Nols} = require './segmentation.ls'
+{VelocityThreshold, NaivePiecewiseLinearFit, Nols} = require './segmentation.ls'
 
 require! mersennetwister
 seed = undefined
@@ -29,9 +29,7 @@ $ ->
 	for [t, x] in zipAll ts, measurement
 		nols.measurement t, x
 
-	console.log nols.splits!
-	result = PiecewiseLinearFit nols.splits!, ts, measurement
-	console.log (getDim 0) result(ts)
+	result = NaivePiecewiseLinearFit nols.splits!, ts, measurement
 
 	mplot.Plot!
 		..plot ts, (getDim 0) gaze

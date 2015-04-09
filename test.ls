@@ -53,7 +53,6 @@ test "Linear fit", ->
 	assert.allmostEqual fit.coeffs!.1, slope
 	assert.allmostEqual (ss y, fitted), fit.residualSs!, "Residual sum of squares"
 
-	console.log fit.coeffs!
 	mplot.Plot!
 		..scatter x, y
 		..plot x, fitted

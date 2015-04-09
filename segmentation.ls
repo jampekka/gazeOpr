@@ -91,7 +91,7 @@ memoize = (f) ->
 			cache[x] = f x
 		return cache[x]
 
-export PiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
+export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	@splits = unique @splits
 	subfit = (endI) ~>
 		# TODO: Something still amiss here!
@@ -102,7 +102,6 @@ export PiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		return LinearFit @ts.slice(start, end), @xs.slice(start, end)
 
 	@predictOne = (t) ~>
-		console.log "t", t
 		fit = subfit (searchAscendingLast(@splits, t))
 		return fit(t)
 
