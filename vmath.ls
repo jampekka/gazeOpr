@@ -74,7 +74,7 @@ export
 			coSs := add coSs, (mul prevDt, dx)
 
 		@residualSs = ~>
-			add @x.ss, (div (pow coSs, 2), @t.ss)
+			sub @x.ss, (div (pow coSs, 2), @t.ss)
 
 		@coeffs = ~>
 			b = div coSs, @t.ss

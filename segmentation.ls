@@ -94,6 +94,7 @@ memoize = (f) ->
 export PiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	@splits = unique @splits
 	subfit = memoize (endI) ~>
+		# TODO: Something still amiss here!
 		startT = @splits[endI - 1]
 		start = searchAscendingFirst @splits, startT
 		endT = @splits[endI]

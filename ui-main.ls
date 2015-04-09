@@ -12,14 +12,16 @@ Math.random = (new mersennetwister seed)~random
 $ ->
 	$ '#tmp-plot' .hide!
 
-	sim = gazeSimulation.SignalSimulator duration: 1, dt: 0.01
+	sim = gazeSimulation.SignalSimulator do
+		duration: 1, dt: 0.01
+		dynamics: ((x) -> x)
 	{ts, gaze, target, measurement} = sim!
 
 	ts = [0 til 1 by 0.01]
 	#gaze = [[0.0, 0.0]]*ts.length
-	g = mul ts, 1.0
-	#gaze = zipAll g, g
-	#measurement = map ((x) -> add x, sim.noise.sample!), gaze
+	g = mul ts, 10.0
+	gaze = zipAll g, g
+	measurement = map ((x) -> add x, sim.noise.sample!), gaze
 
 	#result = Reconstruct VelocityThreshold!, ts, measurement
 

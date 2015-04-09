@@ -1,6 +1,12 @@
 $ = require \jquery
 {map} = require 'prelude-ls'
 
+require! \assert
+assert.allmostEqual = (a, b, ...args) ->
+	# TODO: Relative error
+	assert (Math.abs(a - b) < assert.allmostEqual.eps), ...args
+assert.allmostEqual.eps = 1e-3
+
 tests = []
 test = (name, tester) -> tests.push [name, tester]
 
@@ -24,19 +30,31 @@ test "mplot", ->
 
 test "Linear fit", ->
 	require! './mplot.ls'
-	{mul, add, LinearFit} = require './vmath.ls'
+	{mul, add, pow, LinearFit, sum, sub, div} = require './vmath.ls'
 	# Probably polluting the namespace :(
 	require 'script!jStat/dist/jstat.js'
 
-	x = [0 to 10 by 0.1]
+	x = [0 to 10 by 0.01]
 	noiser = -> jStat.normal(0, 0.0).sample!
 	noise = map noiser, x
-	y = mul x, 10
+	slope = 100
+	y = mul x, slope
 	y = add y, noise
 
 	fit = LinearFit x, y
+	fitted = (map fit, x)
+
+	mean = (x) -> sum x |> div _, x.length
+	ss = (x, fit=mean x) -> sub x, fit |> pow _, 2 |> sum
+
+	assert.allmostEqual (ss x), fit.t.ss, "X sum of squares"
+	assert.allmostEqual (ss y), fit.x.ss, "Y sum of squares"
+	assert.allmostEqual fit.coeffs!.0, 0
+	assert.allmostEqual fit.coeffs!.1, slope
+	assert.allmostEqual (ss y, fitted), fit.residualSs!, "Residual sum of squares"
+
 	console.log fit.coeffs!
 	mplot.Plot!
 		..scatter x, y
-		..plot x, (map fit, x)
+		..plot x, fitted
 		..show @

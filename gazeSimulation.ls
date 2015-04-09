@@ -80,7 +80,7 @@ defaultSpeedDistribution = MixtureDistribution [
 
 # TODO: Estimate mean duration from literature
 export RandomLinearMovementSimulator = fobj ({
-		@size=DEFAULT_AREA_SIZE,
+		@size=DEFAULT_AREA_SIZE
 		@speedDist=defaultSpeedDistribution
 		@meanDuration=0.5
 		}={}) ->
