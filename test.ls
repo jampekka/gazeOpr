@@ -32,7 +32,7 @@ test "Linear fit", ->
 	y = add intercept, (mul x, slope)
 	y = add y, noise
 
-	fit = LinearFit x, y
+	fit = LinearFit ts: x, xs: y
 	fitted = (map fit, x)
 
 	mean = (x) -> sum x |> div _, x.length
@@ -63,14 +63,14 @@ test "Slope fit", ->
 	y = add intercept, (mul x, slope)
 	y = add y, noise
 
-	fit = SlopeFit x, y
+	fit = SlopeFit ts: x, xs: y
 	fitted = (map fit, x)
 
 	mean = (x) -> sum x |> div _, x.length
 	ss = (x, fit=mean x) -> sub x, fit |> pow _, 2 |> sum
-	
+
+	assert.allmostEqual (ss y, fitted), fit.residualSs!, "Residual sum of squares"
 	assert.allmostEqual fit.slope!, slope, "Slope estimate"
-	#assert.allmostEqual (ss y, fitted), fit.residualSs!, "Residual sum of squares"
 
 	mplot.Plot!
 		..scatter x, y

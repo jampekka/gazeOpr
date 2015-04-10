@@ -3,7 +3,7 @@ require! './mplot.ls'
 require! './gazeSimulation.ls'
 {map, zipAll} = require 'prelude-ls'
 {LinInterp, getDim, add, mul} = require './vmath.ls'
-{VelocityThreshold, GreedyPiecewiseLinearFit, NaivePiecewiseLinearFit, NaiveOls} = require './segmentation.ls'
+{VelocityThreshold, GreedyPiecewiseLinearFit, GreedyOls} = require './segmentation.ls'
 
 require! mersennetwister
 seed = undefined
@@ -13,7 +13,7 @@ $ ->
 	$ '#tmp-plot' .hide!
 
 	sim = gazeSimulation.SignalSimulator do
-		duration: 1, dt: 0.01
+		duration: 10, dt: 0.01
 		#dynamics: ((x) -> x)
 	{ts, gaze, target, measurement} = sim!
 
@@ -24,11 +24,11 @@ $ ->
 	#measurement = map ((x) -> add x, sim.noise.sample!), gaze
 
 	#result = Reconstruct VelocityThreshold!, ts, measurement
-	nols = NaiveOls([0.5, 0.5])
+	gols = GreedyOls([0.5, 0.5])
 	for [t, x] in zipAll ts, measurement
-		nols.measurement t, x
+		gols.measurement t, x
 
-	result = GreedyPiecewiseLinearFit nols.splits!, ts, measurement
+	result = GreedyPiecewiseLinearFit gols.splits!, ts, measurement
 
 	mplot.Plot!
 		..plot ts, (getDim 0) gaze
