@@ -99,13 +99,37 @@ memoize = (f) ->
 		return cache[x]
 
 export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
-	@splits = unique @splits
-	subfit = (endI) ~>
+	subfit = memoize (endI) ~>
 		startT = @splits[endI - 1]
 		start = searchAscendingFirst @ts, startT
 		endT = @splits[endI]
 		end = (searchAscendingFirst (@ts.slice start), endT) + start
 		return LinearFit @ts.slice(start, end), @xs.slice(start, end)
+
+	@predictOne = (t) ~>
+		fit = subfit (searchAscendingLast(@splits, t))
+		return fit(t)
+
+	(ts) ~>
+		cmap @predictOne, ts
+
+export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
+	subfit = (endI) ~>
+		if endI == 0
+			return (-> NaN)
+
+		endT = @splits[endI]
+		end = (searchAscendingFirst @ts, endT)
+		if endI == 1
+			return LinearFit @ts.slice(0, end), @xs.slice(0, end)
+
+		startT = @splits[endI - 1]
+		start = searchAscendingFirst @ts, startT
+
+		prevFit = subfit endI - 1
+		t0 = @ts[start - 1]
+		x0 = prevFit t0
+		SlopeFit @ts.slice(start, end), @xs.slice(start, end), t0, x0
 
 	@predictOne = (t) ~>
 		fit = subfit (searchAscendingLast(@splits, t))

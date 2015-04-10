@@ -59,6 +59,29 @@ export
 			@m = add @m, (div d, @n)
 			@ss = add @ss, (mul d, (sub x, @m))
 
+	SlopeFit = fobj (ts, xs, t0=0, x0=0) ->
+		txS = 0
+		tS = 0
+
+		@inc = (t, x) ->
+			t = t - t0
+			x = sub x, x0
+
+			txS := add txS, (mul t, x)
+			tS += t*t
+
+		if xs?
+			for [t, x] in zipAll ts, xs
+				@inc t, x
+
+		@slope = ->
+			div txS, tS
+
+		(t) ~>
+			b = @slope!
+			t = sub t, t0
+			return mul t, b |> add x0, _
+
 	LinearFit = fobj (ts, xs) ->
 		@t = IncSs!
 		@x = IncSs!
