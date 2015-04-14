@@ -148,7 +148,6 @@ export GreedyOlp = fobj (noiseStd) ->
 		prevT = void
 
 		@measurement = (t, x) ~>
-			data.push [t, x]
 			@start ?= t
 			prevT := t
 			@fit.inc t, x
@@ -171,6 +170,7 @@ export GreedyOlp = fobj (noiseStd) ->
 
 	i = 0
 	@measurement = (t, x) ~>
+		data.push [t, x]
 		candidates = filter (.likelihood!?), @hypotheses
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
@@ -230,7 +230,7 @@ export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 			return (-> NaN)
 
 		endT = @splits[endI]
-		end = (searchAscendingFirst @ts, endT) - 1
+		end = (searchAscendingFirst @ts, endT)
 		if endI == 1
 			return LinearFit do
 				ts: @ts.slice(0, end)

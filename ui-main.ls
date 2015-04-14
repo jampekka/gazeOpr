@@ -17,7 +17,7 @@ $ ->
 	$ '#tmp-plot' .hide!
 
 	sim = gazeSimulation.SignalSimulator do
-		target: gazeSimulation.StepSimulator!
+		#target: gazeSimulation.StepSimulator!
 		duration: 2, dt: 0.01
 		dynamics: ((x) -> x)
 		noise: gazeSimulation.NdNormNoise [0.5]*2
