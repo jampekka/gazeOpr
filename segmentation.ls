@@ -1,4 +1,4 @@
-{map, filter, maximumBy, unique} = require 'prelude-ls'
+{map, filter, maximumBy, unique, zipAll} = require 'prelude-ls'
 require! './fobj.ls'
 for name, val of require './vmath.ls' then eval "var #name = val"
 
@@ -21,7 +21,7 @@ denan = (v) ->
 	| v == v => v
 	| _ => void
 
-export NaiveOls = fobj (noiseStd) ->
+export NaiveOlp = fobj (noiseStd) ->
 	nDim = noiseStd.length
 	nParam = 2
 	# Akaikish information criterion.
@@ -65,9 +65,11 @@ export NaiveOls = fobj (noiseStd) ->
 			denan @likelihood! + splitLikelihood!
 
 	@hypotheses = [Hypothesis!]
-
+	
+	data = []
 	i = 0
 	@measurement = (t, x) ~>
+		data.push [t, x]
 		candidates = filter (.likelihood!?), @hypotheses
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
@@ -89,9 +91,29 @@ export NaiveOls = fobj (noiseStd) ->
 			h = h.parent
 		return splits
 
-export GreedyOls = fobj (noiseStd) ->
+	@fit = (ts, xs) ~>
+		for [t, x] in zipAll ts, xs
+			@measurement t, x
+		return @reconstruct!
+
+	@splits = ~>
+		h = maximumBy totalLikelihood, @hypotheses
+		splits = []
+		while h? and h.start?
+			splits.unshift h.start
+			h = h.parent
+		return splits
+
+	@reconstruct = fobj ~>
+		[ts, xs] = zipAll ...data
+		NaivePiecewiseLinearFit @splits!, ts, xs
+
+
+export GreedyOlp = fobj (noiseStd) ->
 	nDim = noiseStd.length
-	nParam = 2
+
+	# TODO: These need tweaking
+	nParam = 1
 	# Akaikish information criterion.
 	# TODO: Figure out more principled stuff here
 	splitLikelihood = ->
@@ -111,10 +133,12 @@ export GreedyOls = fobj (noiseStd) ->
 
 	totalLikelihood = (h) -> h.pastLikelihood + h.myLikelihood
 
+	data = []
+
 	p = @
 
 	Hypothesis = fobj (@parent, t0, x0) ->
-		if @parent?
+		if parent?
 			@pastLikelihood = @parent.likelihood! + splitLikelihood!
 			@fit = SlopeFit t0: t0, x0: x0
 		else
@@ -124,6 +148,7 @@ export GreedyOls = fobj (noiseStd) ->
 		prevT = void
 
 		@measurement = (t, x) ~>
+			data.push [t, x]
 			@start ?= t
 			prevT := t
 			@fit.inc t, x
@@ -155,9 +180,12 @@ export GreedyOls = fobj (noiseStd) ->
 
 		for h in @hypotheses
 			h.measurement t, x
-
 		i += 1
 
+	@fit = (ts, xs) ~>
+		for [t, x] in zipAll ts, xs
+			@measurement t, x
+		return @reconstruct!
 
 	@splits = ~>
 		h = maximumBy totalLikelihood, @hypotheses
@@ -166,6 +194,10 @@ export GreedyOls = fobj (noiseStd) ->
 			splits.unshift h.start
 			h = h.parent
 		return splits
+
+	@reconstruct = fobj ~>
+		[ts, xs] = zipAll ...data
+		GreedyPiecewiseLinearFit @splits!, ts, xs
 
 
 #bruteNolp = (ts, gaze) ->
@@ -183,7 +215,7 @@ export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		start = searchAscendingFirst @ts, startT
 		endT = @splits[endI]
 		end = (searchAscendingFirst (@ts.slice start), endT) + start
-		return LinearFit @ts.slice(start, end), @xs.slice(start, end)
+		return LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
 
 	@predictOne = (t) ~>
 		fit = subfit (searchAscendingLast(@splits, t))
@@ -193,12 +225,12 @@ export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		cmap @predictOne, ts
 
 export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
-	subfit = (endI) ~>
+	subfit = memoize (endI) ~>
 		if endI == 0
 			return (-> NaN)
 
 		endT = @splits[endI]
-		end = (searchAscendingFirst @ts, endT)
+		end = (searchAscendingFirst @ts, endT) - 1
 		if endI == 1
 			return LinearFit do
 				ts: @ts.slice(0, end)

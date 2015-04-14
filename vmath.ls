@@ -59,43 +59,43 @@ export
 			@m = add @m, (div d, @n)
 			@ss = add @ss, (mul d, (sub x, @m))
 
-	SlopeFit = fobj ({ts, xs, t0=0, x0=0}={}) ->
+	SlopeFit = fobj ({ts, xs, @t0=0, @x0=0}={}) ->
 		@n = 0
-		Et = 0
-		Ett = 0
-		Exx = 0
-		Etx = 0
+		@Et = 0
+		@Ett = 0
+		@Exx = 0
+		@Etx = 0
 
-		@inc = (t, x) ->
+		@inc = (t, x) ~>
 			@n += 1
-			t = t - t0
-			x = sub x, x0
+			t = t - @t0
+			x = sub x, @x0
 
-			Et += t
-			Ett += t*t
-			Exx := add Exx, (mul x, x)
-			Etx := add Etx, (mul t, x)
+			@Et += t
+			@Ett += t*t
+			@Exx = add @Exx, (mul x, x)
+			@Etx = add @Etx, (mul t, x)
 
 		if xs?
 			for [t, x] in zipAll ts, xs
 				@inc t, x
 
-		@residualSs = ->
-			sub Exx, (div (pow Etx, 2), Ett)
+		@residualSs = ~>
+			sub @Exx, (div (pow @Etx, 2), @Ett)
 
-		@slope = ->
-			div Etx, Ett
+		@slope = ~>
+			div @Etx, @Ett
 
 		(t) ~>
 			b = @slope!
-			t = sub t, t0
-			return mul t, b |> add x0, _
+			t = sub t, @t0
+			return add @x0, (mul t, b)
 
 	LinearFit = fobj ({ts, xs}={}) ->
 		@t = IncSs!
 		@x = IncSs!
 		@n = 0
-		coSs = 0
+		@coSs = 0
 
 		@inc = (t, x) ~>
 			prevDt = t - @t.m
@@ -103,15 +103,18 @@ export
 			@x x
 			@n = @t.n
 			dx = sub x, @x.m
-			coSs := add coSs, (mul prevDt, dx)
+			@coSs := add @coSs, (mul prevDt, dx)
 
 		@residualSs = ~>
-			sub @x.ss, (div (pow coSs, 2), @t.ss)
+			sub @x.ss, (div (pow @coSs, 2), @t.ss)
 
 		@coeffs = ~>
-			b = div coSs, @t.ss
+			b = div @coSs, @t.ss
 			a = sub @x.m, (mul b, @t.m)
 			return [a, b]
+
+		@clone = ~>
+			LinearFit! <<< @
 
 		if xs?
 			for [t, x] in zipAll ts, xs

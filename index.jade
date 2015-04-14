@@ -2,12 +2,19 @@ doctype html
 html(lang="en")
 	head
 		meta(charset="UTF-8")
-		title Gaze signal analysis and simulation
-
-		style(type="text/css")
-			include:stylus style.styl
+		title Gaze signal operationalization
 
 		script(src="./ui-main.ls")
+		
+		style(type="text/css")
+			include:stylus styles/main.styl
 	body
-		plot-area(id="main-plot")
+		h1 Gaze signal operationalization benchmarks
+		p An introduction here, lorem ipsum lorem ipsum lorem ipsum lorem
+
+		h2 Reconstruction accuracy
+		figure
+			plot-area(id="sample-trial")
+			figcaption A random trial from the benchmark set with reconstruction by select segmentation algorithms.
 		plot-area(id="tmp-plot")
+		

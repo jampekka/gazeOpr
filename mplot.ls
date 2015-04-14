@@ -29,12 +29,20 @@ export Plot = fobj ->
 		@_baseplot (denew Plottable.Plot.Scatter), ...args
 			@plots.push ..
 
+	@xlabel = (text) ~>
+		@xLabel = new Plottable.Component.Label(text)
+
+	@ylabel = (text) ~>
+		@yLabel = new Plottable.Component.Label(text, 'left')
+
 	@show = (el) ~>
 		plots = new Plottable.Component.Group @plots
 		renderer = new Plottable.Component.Table [
 			[null, null, null],
-			[null, @yAxis, plots],
-			[null, null, @xAxis]]
+			[@yLabel, @yAxis, plots],
+			[null, null, @xAxis],
+			[null, null, @xLabel]
+		]
 
 		el.find("svg.mplot-canvas").remove()
 		svg = $("<svg class='mplot-canvas'>").appendTo el
@@ -47,6 +55,8 @@ export Plot = fobj ->
 
 		svg.css width: el.width(), height: el.height()
 		renderer.renderTo d3.selectAll svg
+		@zoom = new Plottable.Interaction.PanZoom @xScale, @yScale
+		plots.registerInteraction @zoom
 		resize()
 		# TODO: Doesn't actually trigger on element resize
 		elementResizeEvent el[0], resize

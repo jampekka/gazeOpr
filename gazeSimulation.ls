@@ -120,8 +120,16 @@ export BesselEyeDynamics = ({dt,order=3,cutoff=11.0}) ->
 		filtered = map filt~simulate, axes
 		zipAll ...filtered
 
-NdNormNoise = (noiseStds) ->
+export NdNormNoise = (noiseStds) ->
 	NdDistribution ((s) -> jStat.normal(0, s)) `map` noiseStds
+
+export StepSimulator = fobj ({@stepMagnitude=[10, 10], @stepTime=1}={}) ->
+	t = 0
+	start = mul @stepMagnitude, 0
+	(dt) ~>
+		t += dt
+		return start if t < @stepTime
+		return @stepMagnitude
 
 export SignalSimulator = fobj ({
 	@dt=0.001, @duration=60.0,
