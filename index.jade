@@ -14,7 +14,11 @@ html(lang="en")
 
 		h2 Reconstruction accuracy
 		figure
-			plot-area(id="sample-trial")
+			plot-area(id="sample-trial-plot")
 			figcaption A random trial from the benchmark set with reconstruction by select segmentation algorithms.
-		plot-area(id="tmp-plot")
+		
+		figure
+			plot-area(id="mrse-plot")
+			figcaption Root mean square errors (RMSE) of reconstructions on different noise levels.
+		
 		

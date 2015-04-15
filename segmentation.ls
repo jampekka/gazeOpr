@@ -65,7 +65,7 @@ export NaiveOlp = fobj (noiseStd) ->
 			denan @likelihood! + splitLikelihood!
 
 	@hypotheses = [Hypothesis!]
-	
+
 	data = []
 	i = 0
 	@measurement = (t, x) ~>
@@ -113,7 +113,7 @@ export GreedyOlp = fobj (noiseStd) ->
 	nDim = noiseStd.length
 
 	# TODO: These need tweaking
-	nParam = 1
+	nParam = 2
 	# Akaikish information criterion.
 	# TODO: Figure out more principled stuff here
 	splitLikelihood = ->

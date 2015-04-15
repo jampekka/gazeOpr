@@ -14,12 +14,13 @@ export Plot = fobj ->
 	@xAxis = new Plottable.Axis.Numeric @xScale, "bottom"
 	@yScale = new Plottable.Scale.Linear
 	@yAxis = new Plottable.Axis.Numeric @yScale, "left"
-
+	
 	@_baseplot = (cls, x, y, opts={}) ~>
 		plot = cls @xScale, @yScale
 			..addDataset map zipObj([\x,\y], _), zip(x, y)
 			..project \x, \x, @xScale
 			..project \y, \y, @yScale
+			..opts = opts
 
 	@plot = (...args) ~>
 		@_baseplot (denew Plottable.Plot.Line), ...args
