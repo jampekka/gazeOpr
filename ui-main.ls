@@ -19,23 +19,23 @@ groupBy = (f, xs) ->
 	return idx
 
 algorithms =
-	* id: \greedyOlp, name: "Greedy OLP", fitter: -> GreedyOlp([0.5, 0.5])~fit
-	* id: \naiveOlp, name: "Naive OLP", fitter: -> NaiveOlp([0.5, 0.5])~fit
+	* id: \greedyOlp, name: "Greedy OLP", fitter: (opts) -> GreedyOlp([opts.noiseLevel]*2)~fit
+	* id: \naiveOlp, name: "Naive OLP", fitter: (opts) -> NaiveOlp([opts.noiseLevel]*2)~fit
 
 targets =
 	* {id: \hybrid, name: "Pursuit and saccade", duration: 2, generator: gazeSimulation.RandomLinearMovementSimulator}
 	* {id: \hybrid, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
 
 dynamics =
-	* id: \bessel, name: "Bessel dynamics"
-	* id: \trivial, name: "No dynamics"
+	* id: \bessel, name: "Bessel dynamics", dynamic: gazeSimulation.BesselEyeDynamics
+	* id: \trivial, name: "No dynamics", dynamic: -> (x) -> x
 
 $ ->
 	$ '#tmp-plot' .hide!
-	targetGen = targets[1]
-	dynamic = dynamics[0]
+	targetGen = targets[0]
+	dynamic = dynamics[1]
 	noiseLevel = 0.5
-	noiseLevels = [0 to 3 by 0.5]
+	noiseLevels = [0.1 to 5 by 0.5]
 	nIters = 3
 	seed = 0
 	Math.random = (new mersennetwister 0)~random
@@ -44,7 +44,7 @@ $ ->
 		sim = gazeSimulation.SignalSimulator do
 			target: targetGen.generator!
 			duration: targetGen.duration, dt: 0.01
-			dynamics: dynamic.dynamic
+			dynamics: dynamic.dynamic!
 			noise: gazeSimulation.NdNormNoise [noiseLevel]*2
 		sim!
 	{ts, gaze, target, measurement} = simulateTrial noiseLevel
@@ -58,20 +58,23 @@ $ ->
 		..ylabel "Vertical position (degrees)"
 
 	for {id, name, fitter} in algorithms
-		fit = fitter! ts, measurement
+		fit = fitter(noiseLevel: noiseLevel) ts, measurement
 		samplePlot.plot ts, (getDim 0) fit(ts), label: name
 			..classed "recon-#{id}"
 	samplePlot.show $ '#sample-trial-plot'
 
 	rmse = (x, y) ->
 		diffs = sub x, y |> (pow _, 2)
-		diff = sum sqrt (add ...nj.transpose diffs)
-		return diff/x.length
+		rse = sum sqrt (add ...nj.transpose diffs)
+		mrse = rse / x.length
+		d = nj.dim(x)[1] ? 1
+		return pow mrse, 1/(d)
 
 	benchmarkOne = (noiseLevel) ->
 		{ts, gaze, target, measurement} = simulateTrial noiseLevel
 		for algorithm in algorithms
-			fit = algorithm.fitter!(ts, measurement) ts
+			fitter = algorithm.fitter noiseLevel: noiseLevel
+			fit = fitter(ts, measurement) ts
 			algorithm: algorithm
 			noiseLevel: noiseLevel
 			rmse: (rmse fit, target)
