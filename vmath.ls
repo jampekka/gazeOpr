@@ -1,6 +1,8 @@
 {zipWith, fold, map, zipAll, findIndex, objsToLists} = require "prelude-ls"
 require! './fobj.ls'
 
+nj = do -> require 'numeric'
+
 export isScalar = (v) -> typeof v == 'number'
 
 cwise = (f) --> (a, b) ->
@@ -10,14 +12,14 @@ cwise = (f) --> (a, b) ->
 	| _ => zipWith f, a, b
 
 export
-	add = cwise (+)
-	sub = cwise (-)
-	mul = cwise (*)
-	div = cwise (/)
-	pow = cwise (**)
-	sqrt = pow _, 0.5
-	sum = fold (+), 0, _
-	norm = (a) -> sqrt sum (pow a, 2)
+	add = nj.add
+	sub = nj.sub
+	mul = nj.mul
+	div = nj.div
+	pow = nj.pow
+	sqrt = nj.sqrt
+	sum = nj.sum
+	norm = nj.norm2
 	cmap = (f, v) -->
 		| isScalar v => f v
 		| _ => f `map` v

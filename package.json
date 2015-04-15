@@ -5,6 +5,7 @@
     "fili": "git://github.com/markert/fili.js",
     "jquery": "^2.1.3",
     "mersennetwister": "^0.2.1",
+    "numeric": "^1.2.5",
     "plottable.js": "git://github.com/palantir/plottable",
     "prelude-ls": "git://github.com/gkz/prelude-ls"
   }
