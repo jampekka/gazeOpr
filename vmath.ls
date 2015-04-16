@@ -63,14 +63,18 @@ export
 			@m = add @m, (div d, @n)
 			@ss = add @ss, (mul d, (sub x, @m))
 
-	SlopeFit = fobj ({ts, xs, @t0=0, @x0=0}={}) ->
-		@n = 0
-		@Et = 0
-		@Ett = 0
-		@Exx = 0
-		@Etx = 0
+	class SlopeFit
+		({ts, xs, @t0=0, @x0=0}={}) ->
+			@n = 0
+			@Et = 0
+			@Ett = 0
+			@Exx = 0
+			@Etx = 0
+			if xs?
+				for [t, x] in zipAll ts, xs
+					@inc t, x
 
-		@inc = (t, x) ~>
+		inc: (t, x) ~>
 			@n += 1
 			t = t - @t0
 			x = sub x, @x0
@@ -80,28 +84,29 @@ export
 			@Exx = add @Exx, (mul x, x)
 			@Etx = add @Etx, (mul t, x)
 
-		if xs?
-			for [t, x] in zipAll ts, xs
-				@inc t, x
 
-		@residualSs = ~>
+		residualSs: ~>
 			sub @Exx, (div (pow @Etx, 2), @Ett)
 
-		@slope = ~>
+		slope: ~>
 			div @Etx, @Ett
 
-		(t) ~>
+		predict: (t) ~>
 			b = @slope!
 			t = sub t, @t0
 			return add @x0, (mul t, b)
 
-	LinearFit = fobj ({ts, xs}={}) ->
-		@t = new IncSs
-		@x = new IncSs
-		@n = 0
-		@coSs = 0
+	class LinearFit
+		({ts, xs}={}) ->
+			@t = new IncSs
+			@x = new IncSs
+			@n = 0
+			@coSs = 0
+			if xs?
+				for [t, x] in zipAll ts, xs
+					@inc t, x
 
-		@inc = (t, x) ~>
+		inc: (t, x) ~>
 			prevDt = t - @t.m
 			@t.inc t
 			@x.inc x
@@ -109,19 +114,15 @@ export
 			dx = sub x, @x.m
 			@coSs = add @coSs, (mul prevDt, dx)
 
-		@residualSs = ~>
+		residualSs: ~>
 			sub @x.ss, (div (pow @coSs, 2), @t.ss)
 
-		@coeffs = ~>
+		coeffs: ~>
 			b = div @coSs, @t.ss
 			a = sub @x.m, (mul b, @t.m)
 			return [a, b]
 
-		if xs?
-			for [t, x] in zipAll ts, xs
-				@inc t, x
-
-		(ts) ~>
+		predict: (ts) ~>
 			[a, b] = @coeffs!
 			if isScalar ts
 				return add a, (mul b, ts)

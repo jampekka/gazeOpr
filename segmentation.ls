@@ -53,7 +53,7 @@ export NaiveOlp = fobj (noiseStd) ->
 		else
 			@pastLikelihood = 0
 
-		@fit = vm.LinearFit!
+		@fit = new vm.LinearFit
 		@measurement = (t, x) ~>
 			@start ?= t
 			@fit.inc t, x
@@ -141,10 +141,10 @@ export GreedyOlp = fobj (noiseStd) ->
 	Hypothesis = fobj (@parent, t0, x0) ->
 		if parent?
 			@pastLikelihood = @parent.likelihood! + splitLikelihood!
-			@fit = vm.SlopeFit t0: t0, x0: x0
+			@fit = new vm.SlopeFit t0: t0, x0: x0
 		else
 			@pastLikelihood = 0
-			@fit = vm.LinearFit!
+			@fit = new vm.LinearFit
 
 		prevT = void
 
@@ -164,7 +164,7 @@ export GreedyOlp = fobj (noiseStd) ->
 			mylik = @likelihood!
 			return [] if not mylik?
 
-			child = Hypothesis @, prevT, @fit prevT
+			child = Hypothesis @, prevT, @fit.predict prevT
 			return [child]
 
 	@hypotheses = [Hypothesis!]
@@ -216,11 +216,11 @@ export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		start = vm.searchAscendingFirst @ts, startT
 		endT = @splits[endI]
 		end = (vm.searchAscendingFirst (@ts.slice start), endT) + start
-		return vm.LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
+		return new vm.LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
 
 	@predictOne = (t) ~>
 		fit = subfit (vm.searchAscendingLast(@splits, t))
-		return fit(t)
+		return fit.predict(t)
 
 	(ts) ~>
 		cmap @predictOne, ts
@@ -233,9 +233,9 @@ export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		endT = @splits[endI]
 		end = (vm.searchAscendingFirst @ts, endT)
 		if endI == 1
-			return vm.LinearFit do
+			return (new vm.LinearFit do
 				ts: @ts.slice(0, end)
-				xs: @xs.slice(0, end)
+				xs: @xs.slice(0, end))~predict
 
 		startT = @splits[endI - 1]
 		start = vm.searchAscendingFirst @ts, startT
@@ -243,11 +243,11 @@ export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		prevFit = subfit endI - 1
 		t0 = @ts[start - 1]
 		x0 = prevFit t0
-		vm.SlopeFit do
+		(new vm.SlopeFit do
 			ts: @ts.slice(start, end)
 			xs: @xs.slice(start, end)
 			t0: t0
-			x0: x0
+			x0: x0)~predict
 
 	@predictOne = (t) ~>
 		fit = subfit (vm.searchAscendingLast(@splits, t))
