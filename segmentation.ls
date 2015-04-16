@@ -75,7 +75,7 @@ export NaiveOlp = fobj (noiseStd) ->
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
 			pruneLimit = leader.minSurvivableLik!
-			@hypotheses = filter ((h) -> not (h.likelihood! < pruneLimit)), @hypotheses
+			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
 			@hypotheses.push Hypothesis leader
 
 		for h in @hypotheses
@@ -176,7 +176,7 @@ export GreedyOlp = fobj (noiseStd) ->
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
 			pruneLimit = leader.minSurvivableLik!
-			@hypotheses = filter ((h) -> not (h.likelihood! < pruneLimit)), @hypotheses
+			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
 			@hypotheses ++= leader.forks!
 
 		for h in @hypotheses
