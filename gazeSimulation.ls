@@ -1,7 +1,5 @@
 {zipWith, fold, map, zipAll, values, findIndex} = require "prelude-ls"
 require! "./fobj.ls"
-require "./vmath.ls"
-
 # Probably polluting the namespace :(
 require 'script!jStat/dist/jstat.js'
 # Pollutes the global namespace :(
@@ -9,7 +7,9 @@ require 'script!jStat/dist/jstat.js'
 # TODO: Fili seems to export stuff, but doesn't seem
 # to work with a simple require
 require 'script!fili/dist/fili.js'
-for name, val of require './vmath.ls' then eval "var #name = val"
+
+vm = require './vmath.ls'
+{add, sub, mul, div, pow, sqrt, norm, sum} = vm
 
 export LinearPursuit = fobj (@x0, @x1, @speed) ->
 	@t = 0
