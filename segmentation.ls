@@ -22,35 +22,14 @@ denan = (v) ->
 	| v == v => v
 	| _ => void
 
-export NaiveOlp = fobj (noiseStd) ->
+
+_NaiveOlpHypothesis = (noiseStd) ->
 	nDim = noiseStd.length
 	nParam = 2
-	# Akaikish information criterion.
-	# TODO: Figure out more principled stuff here
-	splitLikelihood = ->
-		-2*nParam*nDim
-
-	fitLikelihood = (f) ->
-		if f.n < nParam
-			return void
-		residualSs = f.residualSs!
-		# With vector-supporting operators and functions this would read
-		# sum(h.n*log(1.0/noiseStd*sqrt(2*pi)) - residualSs/(2*noiseStd**2))
-		normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
-		normer = map Math.log, normer
-		normedResid = div residualSs, (mul 2, (pow noiseStd, 2))
-		likelihoods = sub (mul f.n, normer), normedResid
-		return sum likelihoods
-
-	totalLikelihood = (h) -> h.pastLikelihood + h.myLikelihood
-
-	p = @
-
-
 	class Hypothesis
 		(@parent) ->
 			if @parent?
-				@pastLikelihood = @parent.likelihood! + splitLikelihood!
+				@pastLikelihood = @parent.likelihood! + @splitLikelihood!
 			else
 				@pastLikelihood = 0
 
@@ -59,56 +38,65 @@ export NaiveOlp = fobj (noiseStd) ->
 		measurement: (t, x) ~>
 			@start ?= t
 			@fit.inc t, x
-			@myLikelihood = fitLikelihood @fit
+			@myLikelihood = @fitLikelihood @fit
 
 		likelihood: ~>
 			denan @pastLikelihood + @myLikelihood
 
 		minSurvivableLik: ~>
-			denan @likelihood! + splitLikelihood!
+			denan @likelihood! + @splitLikelihood!
 
-	@hypotheses = [new Hypothesis]
+		fitLikelihood: (f) ->
+			if f.n < nParam
+				return void
+			residualSs = f.residualSs!
+			# With vector-supporting operators and functions this would read
+			# sum(h.n*log(1.0/noiseStd*sqrt(2*pi)) - residualSs/(2*noiseStd**2))
+			normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
+			normer = map Math.log, normer
+			normedResid = div residualSs, (mul 2, (pow noiseStd, 2))
+			likelihoods = sub (mul f.n, normer), normedResid
+			return sum likelihoods
 
-	data = []
-	i = 0
-	@measurement = (t, x) ~>
-		data.push [t, x]
+		# Akaikish information criterion.
+		# TODO: Figure out more principled stuff here
+		splitLikelihood: ->
+			-2*nParam*nDim
+
+export NaiveOlp = (...args) -> new _NaiveOlp ...args
+class _NaiveOlp
+	(noiseStd) ->
+		@Hypothesis = _NaiveOlpHypothesis noiseStd
+		@hypotheses = [new @Hypothesis]
+		@_data = []
+
+	measurement: (t, x) ~>
+		@_data.push [t, x]
 		candidates = filter (.likelihood!?), @hypotheses
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
 			pruneLimit = leader.minSurvivableLik!
 			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
-			@hypotheses.push new Hypothesis leader
+			@hypotheses.push new @Hypothesis leader
 
 		for h in @hypotheses
 			h.measurement t, x
 
-		i += 1
-
-
-	@splits = ~>
-		h = maximumBy totalLikelihood, @hypotheses
-		splits = []
-		while h? and h.start?
-			splits.unshift h.start
-			h = h.parent
-		return splits
-
-	@fit = (ts, xs) ~>
+	fit: (ts, xs) ~>
 		for [t, x] in zipAll ts, xs
 			@measurement t, x
 		return @reconstruct!
 
-	@splits = ~>
-		h = maximumBy totalLikelihood, @hypotheses
+	splits: ~>
+		h = maximumBy (.likelihood!), @hypotheses
 		splits = []
 		while h? and h.start?
 			splits.unshift h.start
 			h = h.parent
 		return splits
 
-	@reconstruct = fobj ~>
-		[ts, xs] = zipAll ...data
+	reconstruct: ~>
+		[ts, xs] = zipAll ...@_data
 		NaivePiecewiseLinearFit @splits!, ts, xs
 
 
