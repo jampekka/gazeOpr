@@ -51,12 +51,13 @@ export
 		(ts) ~>
 			cmap @interpOne, ts
 
-	IncSs = fobj ->
-		@n = 0
-		@m = 0
-		@ss = 0
+	class IncSs
+		->
+			@n = 0
+			@m = 0
+			@ss = 0
 
-		(x) ~>
+		inc: (x) ~>
 			@n += 1
 			d = sub x, @m
 			@m = add @m, (div d, @n)
@@ -95,15 +96,15 @@ export
 			return add @x0, (mul t, b)
 
 	LinearFit = fobj ({ts, xs}={}) ->
-		@t = IncSs!
-		@x = IncSs!
+		@t = new IncSs
+		@x = new IncSs
 		@n = 0
 		@coSs = 0
 
 		@inc = (t, x) ~>
 			prevDt = t - @t.m
-			@t t
-			@x x
+			@t.inc t
+			@x.inc x
 			@n = @t.n
 			dx = sub x, @x.m
 			@coSs = add @coSs, (mul prevDt, dx)
