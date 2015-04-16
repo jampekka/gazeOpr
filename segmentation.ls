@@ -47,25 +47,27 @@ export NaiveOlp = fobj (noiseStd) ->
 	p = @
 
 
-	Hypothesis = fobj (@parent) ->
-		if @parent?
-			@pastLikelihood = @parent.likelihood! + splitLikelihood!
-		else
-			@pastLikelihood = 0
+	class Hypothesis
+		(@parent) ->
+			if @parent?
+				@pastLikelihood = @parent.likelihood! + splitLikelihood!
+			else
+				@pastLikelihood = 0
 
-		@fit = new vm.LinearFit
-		@measurement = (t, x) ~>
+			@fit = new vm.LinearFit
+
+		measurement: (t, x) ~>
 			@start ?= t
 			@fit.inc t, x
 			@myLikelihood = fitLikelihood @fit
 
-		@likelihood = ~>
+		likelihood: ~>
 			denan @pastLikelihood + @myLikelihood
 
-		@minSurvivableLik = ~>
+		minSurvivableLik: ~>
 			denan @likelihood! + splitLikelihood!
 
-	@hypotheses = [Hypothesis!]
+	@hypotheses = [new Hypothesis]
 
 	data = []
 	i = 0
@@ -76,7 +78,7 @@ export NaiveOlp = fobj (noiseStd) ->
 		if leader?
 			pruneLimit = leader.minSurvivableLik!
 			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
-			@hypotheses.push Hypothesis leader
+			@hypotheses.push new Hypothesis leader
 
 		for h in @hypotheses
 			h.measurement t, x
@@ -138,36 +140,37 @@ export GreedyOlp = fobj (noiseStd) ->
 
 	p = @
 
-	Hypothesis = fobj (@parent, t0, x0) ->
-		if parent?
-			@pastLikelihood = @parent.likelihood! + splitLikelihood!
-			@fit = new vm.SlopeFit t0: t0, x0: x0
-		else
-			@pastLikelihood = 0
-			@fit = new vm.LinearFit
+	class Hypothesis
+		(@parent, t0, x0) ->
+			if parent?
+				@pastLikelihood = @parent.likelihood! + splitLikelihood!
+				@fit = new vm.SlopeFit t0: t0, x0: x0
+			else
+				@pastLikelihood = 0
+				@fit = new vm.LinearFit
 
-		prevT = void
+			@_prevT = void
 
-		@measurement = (t, x) ~>
+		measurement: (t, x) ~>
 			@start ?= t
-			prevT := t
+			@_prevT = t
 			@fit.inc t, x
 			@myLikelihood = fitLikelihood @fit
 
-		@likelihood = ~>
+		likelihood: ~>
 			denan @pastLikelihood + @myLikelihood
 
-		@minSurvivableLik = ~>
+		minSurvivableLik: ~>
 			denan @likelihood! + splitLikelihood!
 
-		@forks = ~>
+		forks: ~>
 			mylik = @likelihood!
 			return [] if not mylik?
 
-			child = Hypothesis @, prevT, @fit.predict prevT
+			child = new Hypothesis @, @_prevT, @fit.predict @_prevT
 			return [child]
 
-	@hypotheses = [Hypothesis!]
+	@hypotheses = [new Hypothesis]
 
 	i = 0
 	@measurement = (t, x) ~>
