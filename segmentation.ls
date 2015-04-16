@@ -1,6 +1,7 @@
 {map, filter, maximumBy, unique, zipAll} = require 'prelude-ls'
 require! './fobj.ls'
-for name, val of require './vmath.ls' then eval "var #name = val"
+vm = require './vmath.ls'
+{div, mul, sqrt, sub, add, pow, sum, cmap} = vm
 
 export VelocityThreshold = fobj (@threshold=10) ->
 	(ts, xs) ~>
@@ -52,7 +53,7 @@ export NaiveOlp = fobj (noiseStd) ->
 		else
 			@pastLikelihood = 0
 
-		@fit = LinearFit!
+		@fit = vm.LinearFit!
 		@measurement = (t, x) ~>
 			@start ?= t
 			@fit.inc t, x
@@ -140,10 +141,10 @@ export GreedyOlp = fobj (noiseStd) ->
 	Hypothesis = fobj (@parent, t0, x0) ->
 		if parent?
 			@pastLikelihood = @parent.likelihood! + splitLikelihood!
-			@fit = SlopeFit t0: t0, x0: x0
+			@fit = vm.SlopeFit t0: t0, x0: x0
 		else
 			@pastLikelihood = 0
-			@fit = LinearFit!
+			@fit = vm.LinearFit!
 
 		prevT = void
 
@@ -212,13 +213,13 @@ memoize = (f) ->
 export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	subfit = memoize (endI) ~>
 		startT = @splits[endI - 1]
-		start = searchAscendingFirst @ts, startT
+		start = vm.searchAscendingFirst @ts, startT
 		endT = @splits[endI]
-		end = (searchAscendingFirst (@ts.slice start), endT) + start
-		return LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
+		end = (vm.searchAscendingFirst (@ts.slice start), endT) + start
+		return vm.LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
 
 	@predictOne = (t) ~>
-		fit = subfit (searchAscendingLast(@splits, t))
+		fit = subfit (vm.searchAscendingLast(@splits, t))
 		return fit(t)
 
 	(ts) ~>
@@ -230,26 +231,26 @@ export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 			return (-> NaN)
 
 		endT = @splits[endI]
-		end = (searchAscendingFirst @ts, endT)
+		end = (vm.searchAscendingFirst @ts, endT)
 		if endI == 1
-			return LinearFit do
+			return vm.LinearFit do
 				ts: @ts.slice(0, end)
 				xs: @xs.slice(0, end)
 
 		startT = @splits[endI - 1]
-		start = searchAscendingFirst @ts, startT
+		start = vm.searchAscendingFirst @ts, startT
 
 		prevFit = subfit endI - 1
 		t0 = @ts[start - 1]
 		x0 = prevFit t0
-		SlopeFit do
+		vm.SlopeFit do
 			ts: @ts.slice(start, end)
 			xs: @xs.slice(start, end)
 			t0: t0
 			x0: x0
 
 	@predictOne = (t) ~>
-		fit = subfit (searchAscendingLast(@splits, t))
+		fit = subfit (vm.searchAscendingLast(@splits, t))
 		return fit(t)
 
 	(ts) ~>

@@ -1,7 +1,7 @@
 {zipWith, fold, map, zipAll, findIndex, objsToLists} = require "prelude-ls"
 require! './fobj.ls'
 
-nj = do -> require 'numeric'
+nj = require './numeric.js'
 
 export isScalar = (v) -> typeof v == 'number'
 
@@ -20,6 +20,7 @@ export
 	sqrt = nj.sqrt
 	sum = nj.sum
 	norm = nj.norm2
+	mean = (xs) -> (nj.sum xs)/xs.length
 	cmap = (f, v) -->
 		| isScalar v => f v
 		| _ => f `map` v
@@ -39,7 +40,7 @@ export
 		@interpOne = (t) ~>
 			return NaN if t < ts[0]
 			return NaN if t > ts[*-1]
-			i = (searchAscending ts, t) - 1
+			i = (searchAscendingFirst ts, t) - 1
 			return @xs[0] if i < 0
 
 			dt = ts[i+1] - ts[i]
@@ -105,7 +106,7 @@ export
 			@x x
 			@n = @t.n
 			dx = sub x, @x.m
-			@coSs := add @coSs, (mul prevDt, dx)
+			@coSs = add @coSs, (mul prevDt, dx)
 
 		@residualSs = ~>
 			sub @x.ss, (div (pow @coSs, 2), @t.ss)
@@ -115,14 +116,15 @@ export
 			a = sub @x.m, (mul b, @t.m)
 			return [a, b]
 
-		@clone = ~>
-			LinearFit! <<< @
-
 		if xs?
 			for [t, x] in zipAll ts, xs
 				@inc t, x
 
-		(t) ~>
+		(ts) ~>
 			[a, b] = @coeffs!
-			return add a, (mul t, b)
+			if isScalar ts
+				return add a, (mul b, ts)
+
+			for t in ts
+				add a, (mul b, t)
 

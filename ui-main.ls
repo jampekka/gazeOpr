@@ -2,8 +2,9 @@ $ = require \jquery
 require! './mplot.ls'
 require! './gazeSimulation.ls'
 {map, zipAll, concat} = require 'prelude-ls'
-nj = require 'numeric'
-{LinInterp, getDim, add, mul, pow, sub, sum, sqrt} = require './vmath.ls'
+nj = require './numeric.js'
+vm = require './vmath.ls'
+{LinInterp, getDim, add, mul, pow, sub, sum, sqrt} = vm
 {VelocityThreshold, GreedyPiecewiseLinearFit, GreedyOlp, NaiveOlp} = require './segmentation.ls'
 
 require! mersennetwister
@@ -21,10 +22,13 @@ groupBy = (f, xs) ->
 algorithms =
 	* id: \greedyOlp, name: "Greedy OLP", fitter: (opts) -> GreedyOlp([opts.noiseLevel]*2)~fit
 	* id: \naiveOlp, name: "Naive OLP", fitter: (opts) -> NaiveOlp([opts.noiseLevel]*2)~fit
+	#* id: \dummy, name: "No partitioning", fitter: (opts) -> (t, x) -> (vm.LinearFit ts: t, xs: x)
+	#* id: \raw, name: "No filtering", fitter: (opts) -> (t, x) -> vm.LinInterp t, x
 
 targets =
-	* {id: \hybrid, name: "Pursuit and saccade", duration: 2, generator: gazeSimulation.RandomLinearMovementSimulator}
-	* {id: \hybrid, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
+	* {id: \hybrid, name: "Pursuit and saccade", duration: 5, generator: gazeSimulation.RandomLinearMovementSimulator}
+	* {id: \singleSaccade, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
+	* {id: \singleFixation, name: "Single fixation", duration: 2, generator: -> (dt) -> [0, 0]}
 
 dynamics =
 	* id: \bessel, name: "Bessel dynamics", dynamic: gazeSimulation.BesselEyeDynamics
@@ -35,8 +39,8 @@ $ ->
 	targetGen = targets[0]
 	dynamic = dynamics[1]
 	noiseLevel = 0.5
-	noiseLevels = [0.1 to 5 by 0.5]
-	nIters = 3
+	noiseLevels = [1e-3 to 5 by 1]
+	nIters = 5
 	seed = 0
 	Math.random = (new mersennetwister 0)~random
 
@@ -67,32 +71,33 @@ $ ->
 		diffs = sub x, y |> (pow _, 2)
 		rse = sum sqrt (add ...nj.transpose diffs)
 		mrse = rse / x.length
-		d = nj.dim(x)[1] ? 1
-		return pow mrse, 1/(d)
+		return mrse
 
 	benchmarkOne = (noiseLevel) ->
 		{ts, gaze, target, measurement} = simulateTrial noiseLevel
+		actualNoise = rmse measurement, gaze
 		for algorithm in algorithms
 			fitter = algorithm.fitter noiseLevel: noiseLevel
 			fit = fitter(ts, measurement) ts
 			algorithm: algorithm
 			noiseLevel: noiseLevel
-			rmse: (rmse fit, target)
+			actualNoise: actualNoise
+			rmse: (rmse fit, gaze)
 
 	benchmarkNoiseLevel = (noiseLevel) ->
 		concat map benchmarkOne, [noiseLevel]*nIters
 
 	benchmark = ->
 		concat map benchmarkNoiseLevel, noiseLevels
-	
+
 	mrsePlot = mplot.Plot!
-		..xlabel "Noise standard deviation (degrees)"
+		..xlabel "Noise reduction (degrees)"
 		..ylabel "Root mean square error (degrees)"
 
 	(groupBy (.algorithm), benchmark!).forEach (result, algorithm) ->
 		stats = []
 		(groupBy (.noiseLevel), result).forEach (r, level) ->
-			stats.push [level, sum r.map (.rmse)]
+			stats.push [level, vm.mean r.map (.rmse)]
 		[x, y] = zipAll ...stats
 		mrsePlot.plot x, y, label: algorithm.name
 	mrsePlot.show $ \#mrse-plot
