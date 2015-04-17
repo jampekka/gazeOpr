@@ -2,7 +2,7 @@ $ = require \jquery
 require! './mplot.ls'
 require! './gazeSimulation.ls'
 {map, zipAll, concat} = require 'prelude-ls'
-nj = require './numeric.js'
+nj = require 'numeric'
 vm = require './vmath.ls'
 {LinInterp, getDim, add, mul, pow, sub, sum, sqrt} = vm
 {VelocityThreshold, GreedyPiecewiseLinearFit, GreedyOlp, NaiveOlp} = require './segmentation.ls'
@@ -20,9 +20,9 @@ groupBy = (f, xs) ->
 	return idx
 
 algorithms =
-	* id: \greedyOlp, name: "Greedy OLP", fitter: (opts) -> GreedyOlp([opts.noiseLevel]*2)~fit
+	#* id: \greedyOlp, name: "Greedy OLP", fitter: (opts) -> GreedyOlp([opts.noiseLevel]*2)~fit
 	* id: \naiveOlp, name: "Naive OLP", fitter: (opts) -> NaiveOlp([opts.noiseLevel]*2)~fit
-	#* id: \dummy, name: "No partitioning", fitter: (opts) -> (t, x) -> (vm.LinearFit ts: t, xs: x)
+	* id: \dummy, name: "No partitioning", fitter: (opts) -> (t, x) -> (new vm.LinearFit ts: t, xs: x)~predict
 	#* id: \raw, name: "No filtering", fitter: (opts) -> (t, x) -> vm.LinInterp t, x
 
 targets =
@@ -68,8 +68,8 @@ $ ->
 	samplePlot.show $ '#sample-trial-plot'
 
 	rmse = (x, y) ->
-		diffs = sub x, y |> (pow _, 2)
-		rse = sum sqrt (add ...nj.transpose diffs)
+		diffs = nj.sub x, y |> (nj.pow _, 2)
+		rse = sum nj.sqrt (add ...nj.transpose diffs)
 		mrse = rse / x.length
 		return mrse
 

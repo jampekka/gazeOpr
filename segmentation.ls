@@ -4,7 +4,7 @@ vm = require './vmath.ls'
 {div, mul, sqrt, sub, add, pow, sum, cmap} = vm
 
 export VelocityThreshold = fobj (@threshold=10) ->
-	(ts, xs) ~>
+	(ts, xs) ->
 		splits = []
 		wasMoving = false
 		for i in [1 til ts.length]
@@ -26,6 +26,10 @@ denan = (v) ->
 _NaiveOlpHypothesis = (noiseStd) ->
 	nDim = noiseStd.length
 	nParam = 2
+	normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
+	normer = map Math.log, normer
+	rnormer = (mul 2, (pow noiseStd, 2))
+
 	class Hypothesis
 		(@parent) ->
 			if @parent?
@@ -35,15 +39,15 @@ _NaiveOlpHypothesis = (noiseStd) ->
 
 			@fit = new vm.LinearFit
 
-		measurement: (t, x) ~>
+		measurement: (t, x) ->
 			@start ?= t
 			@fit.inc t, x
 			@myLikelihood = @fitLikelihood @fit
 
-		likelihood: ~>
+		likelihood: ->
 			denan @pastLikelihood + @myLikelihood
 
-		minSurvivableLik: ~>
+		minSurvivableLik: ->
 			denan @likelihood! + @splitLikelihood!
 
 		fitLikelihood: (f) ->
@@ -52,9 +56,7 @@ _NaiveOlpHypothesis = (noiseStd) ->
 			residualSs = f.residualSs!
 			# With vector-supporting operators and functions this would read
 			# sum(h.n*log(1.0/noiseStd*sqrt(2*pi)) - residualSs/(2*noiseStd**2))
-			normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
-			normer = map Math.log, normer
-			normedResid = div residualSs, (mul 2, (pow noiseStd, 2))
+			normedResid = div residualSs, rnormer
 			likelihoods = sub (mul f.n, normer), normedResid
 			return sum likelihoods
 
@@ -68,10 +70,11 @@ class _NaiveOlp
 	(noiseStd) ->
 		@Hypothesis = _NaiveOlpHypothesis noiseStd
 		@hypotheses = [new @Hypothesis]
-		@_data = []
+		@_data = ts: [], xs: []
 
-	measurement: (t, x) ~>
-		@_data.push [t, x]
+	measurement: (t, x) ->
+		@_data.ts.push t
+		@_data.xs.push x
 		candidates = filter (.likelihood!?), @hypotheses
 		leader = maximumBy (.likelihood!), candidates
 		if leader?
@@ -82,12 +85,12 @@ class _NaiveOlp
 		for h in @hypotheses
 			h.measurement t, x
 
-	fit: (ts, xs) ~>
-		for [t, x] in zipAll ts, xs
-			@measurement t, x
+	fit: (ts, xs) ->
+		for i from 0 til ts.length
+			@measurement ts[i], xs[i]
 		return @reconstruct!
 
-	splits: ~>
+	splits: ->
 		h = maximumBy (.likelihood!), @hypotheses
 		splits = []
 		while h? and h.start?
@@ -95,9 +98,8 @@ class _NaiveOlp
 			h = h.parent
 		return splits
 
-	reconstruct: ~>
-		[ts, xs] = zipAll ...@_data
-		NaivePiecewiseLinearFit @splits!, ts, xs
+	reconstruct: ->
+		NaivePiecewiseLinearFit @splits!, @_data.ts, @_data.xs
 
 
 export GreedyOlp = fobj (noiseStd) ->
@@ -139,19 +141,19 @@ export GreedyOlp = fobj (noiseStd) ->
 
 			@_prevT = void
 
-		measurement: (t, x) ~>
+		measurement: (t, x) ->
 			@start ?= t
 			@_prevT = t
 			@fit.inc t, x
 			@myLikelihood = fitLikelihood @fit
 
-		likelihood: ~>
+		likelihood: ->
 			denan @pastLikelihood + @myLikelihood
 
-		minSurvivableLik: ~>
+		minSurvivableLik: ->
 			denan @likelihood! + splitLikelihood!
 
-		forks: ~>
+		forks: ->
 			mylik = @likelihood!
 			return [] if not mylik?
 
@@ -161,7 +163,7 @@ export GreedyOlp = fobj (noiseStd) ->
 	@hypotheses = [new Hypothesis]
 
 	i = 0
-	@measurement = (t, x) ~>
+	@measurement = (t, x) ->
 		data.push [t, x]
 		candidates = filter (.likelihood!?), @hypotheses
 		leader = maximumBy (.likelihood!), candidates
@@ -174,12 +176,12 @@ export GreedyOlp = fobj (noiseStd) ->
 			h.measurement t, x
 		i += 1
 
-	@fit = (ts, xs) ~>
+	@fit = (ts, xs) ->
 		for [t, x] in zipAll ts, xs
 			@measurement t, x
 		return @reconstruct!
 
-	@splits = ~>
+	@splits = ->
 		h = maximumBy totalLikelihood, @hypotheses
 		splits = []
 		while h? and h.start?
@@ -187,7 +189,7 @@ export GreedyOlp = fobj (noiseStd) ->
 			h = h.parent
 		return splits
 
-	@reconstruct = fobj ~>
+	@reconstruct = fobj ->
 		[ts, xs] = zipAll ...data
 		GreedyPiecewiseLinearFit @splits!, ts, xs
 
@@ -209,12 +211,12 @@ export NaivePiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 		end = (vm.searchAscendingFirst (@ts.slice start), endT) + start
 		return new vm.LinearFit ts: @ts.slice(start, end), xs: @xs.slice(start, end)
 
-	@predictOne = (t) ~>
+	@predictOne = (t) ->
 		fit = subfit (vm.searchAscendingLast(@splits, t))
 		return fit.predict(t)
 
 	(ts) ~>
-		cmap @predictOne, ts
+		cmap @~predictOne, ts
 
 export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 	subfit = memoize (endI) ~>
@@ -240,9 +242,9 @@ export GreedyPiecewiseLinearFit = fobj (@splits, @ts, @xs) ->
 			t0: t0
 			x0: x0)~predict
 
-	@predictOne = (t) ~>
+	@predictOne = (t) ->
 		fit = subfit (vm.searchAscendingLast(@splits, t))
-		return fit(t)
+		return fit.predict(t)
 
 	(ts) ~>
-		cmap @predictOne, ts
+		cmap @~predictOne, ts
