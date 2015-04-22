@@ -40,7 +40,7 @@ $ ->
 	dynamic = dynamics[1]
 	noiseLevel = 0.5
 	noiseLevels = [1e-3 to 5 by 1]
-	nIters = 5
+	nIters = 10
 	seed = 0
 	Math.random = (new mersennetwister 0)~random
 

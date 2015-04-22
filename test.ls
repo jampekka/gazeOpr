@@ -32,8 +32,8 @@ test "Linear fit", ->
 	y = add intercept, (mul x, slope)
 	y = add y, noise
 
-	fit = LinearFit ts: x, xs: y
-	fitted = (map fit, x)
+	fit = new LinearFit ts: x, xs: y
+	fitted = (map fit~predict, x)
 
 	mean = (x) -> sum x |> div _, x.length
 	ss = (x, fit=mean x) -> sub x, fit |> pow _, 2 |> sum
@@ -49,6 +49,7 @@ test "Linear fit", ->
 		..plot x, fitted
 		..show @
 
+/*
 test "Slope fit", ->
 	require! './mplot.ls'
 	{mul, add, pow, SlopeFit, sum, sub, div} = require './vmath.ls'
@@ -75,4 +76,46 @@ test "Slope fit", ->
 	mplot.Plot!
 		..scatter x, y
 		..plot x, fitted
+		..show @
+*/
+
+test "Gaussian kernel", ->
+	require! './mplot.ls'
+	require! './vmath.ls'
+	{maximumBy} = require 'prelude-ls'
+
+	dt = 0.01
+	std = 1
+	kernel = vmath.gaussianKernel std/dt
+	ts = [0 til kernel.length]
+	mplot.Plot!
+		..plot ts, kernel
+		..show @
+
+	assert.allmostEqual (vmath.sum kernel), 1
+	maxI = maximumBy ((i) -> kernel[i]), [0 til kernel.length]
+	assert.equal maxI, (kernel.length-1)/2
+
+test "Gaussian Smooth", ->
+	require! './mplot.ls'
+	require! './vmath.ls'
+
+	dt = 0.1
+	ts = [0 to 20 by dt]
+	midt = ts[Math.floor(ts.length/2)]
+	noiseStd = 2
+	require 'script!jStat/dist/jstat.js'
+
+	noiser = -> jStat.normal(0, noiseStd).sample!
+	xs = for t in ts
+		if t < midt
+			0
+		else
+			10
+
+	signal = map (+ noiser!), xs
+	smoothed = vmath.gaussianFilter1d(1.0/dt) signal
+	mplot.Plot!
+		..plot ts, xs
+		..plot ts, smoothed
 		..show @

@@ -2,8 +2,6 @@
 
 {map, merge} = require "ramda"
 require! cheerio
-# OMG, the WTF node.js?
-# Very very close to switching to IO.js.
 require! rw
 P = require \bluebird
 require! webpack
@@ -14,7 +12,7 @@ webpackConfig =
 			* test: /\.ls$/, loader: 'livescript-loader'
 			* test: /\.coffee$/, loader: 'coffee-loader'
 			* test: /\.css$/, loader: "style-loader!css-loader"
-	devtool: "eval-inline-source-map"
+	#devtool: "inline-source-map"
 
 webpackFile = (src, dst, config=webpackConfig) ->
 	config = merge webpackConfig,

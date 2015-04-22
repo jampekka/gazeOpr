@@ -28,7 +28,7 @@ _NaiveOlpHypothesis = (noiseStd) ->
 	nParam = 2
 	normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
 	normer = map Math.log, normer
-	rnormer = (mul 2, (pow noiseStd, 2))
+	rnormer = div 1.0, (mul 2, (pow noiseStd, 2))
 
 	class Hypothesis
 		(@parent) ->
@@ -56,7 +56,7 @@ _NaiveOlpHypothesis = (noiseStd) ->
 			residualSs = f.residualSs!
 			# With vector-supporting operators and functions this would read
 			# sum(h.n*log(1.0/noiseStd*sqrt(2*pi)) - residualSs/(2*noiseStd**2))
-			normedResid = div residualSs, rnormer
+			normedResid = mul residualSs, rnormer
 			likelihoods = sub (mul f.n, normer), normedResid
 			return sum likelihoods
 
