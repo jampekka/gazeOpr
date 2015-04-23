@@ -27,7 +27,7 @@ algorithms = [
 	#* id: \raw, name: "No filtering", fitter: (opts) -> (t, x) -> vm.LinInterp t, x
 
 targets =
-	* {id: \hybrid, name: "Pursuit and saccade", duration: 2, generator: gazeSimulation.RandomLinearMovementSimulator}
+	* {id: \hybrid, name: "Pursuit and saccade", duration: 0.5, generator: gazeSimulation.RandomLinearMovementSimulator}
 	* {id: \singleSaccade, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
 	* {id: \singleFixation, name: "Single fixation", duration: 2, generator: -> (dt) -> [0, 0]}
 
@@ -44,7 +44,7 @@ $ ->
 	nIters = 5
 	seed = undefined
 	Math.random = (new mersennetwister seed)~random
-	
+
 	dt = 0.01
 	simulateTrial = (noiseLevel) ->
 		sim = gazeSimulation.SignalSimulator do

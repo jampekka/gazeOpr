@@ -23,7 +23,44 @@ denan = (v) ->
 	| _ => void
 
 
-_NaiveOlpHypothesis = (noiseStd) ->
+
+class Pelt
+	(root) ->
+		@hypotheses = [root]
+		@_data = ts: [], xs: []
+
+	measurement: (t, x) ->
+		@_data.ts.push t
+		@_data.xs.push x
+		candidates = filter (.likelihood!?), @hypotheses
+		leader = maximumBy (.likelihood!), candidates
+		if leader?
+			pruneLimit = leader.minSurvivableLik!
+			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
+			@hypotheses ++= leader.forks!
+
+		for h in @hypotheses
+			h.measurement t, x
+
+	fit: (ts, xs) ->
+		for i from 0 til ts.length
+			@measurement ts[i], xs[i]
+		return @reconstruct!
+
+	splits: ->
+		h = maximumBy (.likelihood!), @hypotheses
+		splits = []
+		while h? and h.start?
+			splits.unshift h.start
+			h = h.parent
+		return splits
+
+	reconstruct: ->
+		# TODO: NO IMPLEMENTATION HERE!
+		NaivePiecewiseLinearFit @splits!, @_data.ts, @_data.xs
+
+
+export NaiveOlp = (noiseStd) ->
 	nDim = noiseStd.length
 	nParam = 2
 	normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
@@ -65,41 +102,14 @@ _NaiveOlpHypothesis = (noiseStd) ->
 		splitLikelihood: ->
 			-2*nParam*nDim
 
-export NaiveOlp = (...args) -> new _NaiveOlp ...args
-class _NaiveOlp
-	(noiseStd) ->
-		@Hypothesis = _NaiveOlpHypothesis noiseStd
-		@hypotheses = [new @Hypothesis]
-		@_data = ts: [], xs: []
+		forks: ->
+			mylik = @likelihood!
+			return [] if not mylik?
 
-	measurement: (t, x) ->
-		@_data.ts.push t
-		@_data.xs.push x
-		candidates = filter (.likelihood!?), @hypotheses
-		leader = maximumBy (.likelihood!), candidates
-		if leader?
-			pruneLimit = leader.minSurvivableLik!
-			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
-			@hypotheses.push new @Hypothesis leader
+			child = new Hypothesis @
+			return [child]
 
-		for h in @hypotheses
-			h.measurement t, x
-
-	fit: (ts, xs) ->
-		for i from 0 til ts.length
-			@measurement ts[i], xs[i]
-		return @reconstruct!
-
-	splits: ->
-		h = maximumBy (.likelihood!), @hypotheses
-		splits = []
-		while h? and h.start?
-			splits.unshift h.start
-			h = h.parent
-		return splits
-
-	reconstruct: ->
-		NaivePiecewiseLinearFit @splits!, @_data.ts, @_data.xs
+	return new Pelt new Hypothesis
 
 
 export GreedyOlp = fobj (noiseStd) ->
