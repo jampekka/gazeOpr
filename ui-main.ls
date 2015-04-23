@@ -19,14 +19,15 @@ groupBy = (f, xs) ->
 		idx.get(key).push x
 	return idx
 
-algorithms =
+algorithms = [
 	#* id: \greedyOlp, name: "Greedy OLP", fitter: (opts) -> GreedyOlp([opts.noiseLevel]*2)~fit
-	* id: \naiveOlp, name: "Naive OLP", fitter: (opts) -> NaiveOlp([opts.noiseLevel]*2)~fit
-	* id: \dummy, name: "No partitioning", fitter: (opts) -> (t, x) -> (new vm.LinearFit ts: t, xs: x)~predict
+	id: \naiveOlp, name: "Naive OLP", fitter: (opts) -> NaiveOlp([opts.noiseLevel]*2)~fit
+	]
+	#* id: \dummy, name: "No partitioning", fitter: (opts) -> (t, x) -> (new vm.LinearFit ts: t, xs: x)~predict
 	#* id: \raw, name: "No filtering", fitter: (opts) -> (t, x) -> vm.LinInterp t, x
 
 targets =
-	* {id: \hybrid, name: "Pursuit and saccade", duration: 5, generator: gazeSimulation.RandomLinearMovementSimulator}
+	* {id: \hybrid, name: "Pursuit and saccade", duration: 2, generator: gazeSimulation.RandomLinearMovementSimulator}
 	* {id: \singleSaccade, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
 	* {id: \singleFixation, name: "Single fixation", duration: 2, generator: -> (dt) -> [0, 0]}
 
@@ -37,18 +38,19 @@ dynamics =
 $ ->
 	$ '#tmp-plot' .hide!
 	targetGen = targets[0]
-	dynamic = dynamics[1]
+	dynamic = dynamics[0]
 	noiseLevel = 0.5
 	noiseLevels = [1e-3 to 5 by 1]
-	nIters = 10
-	seed = 0
-	Math.random = (new mersennetwister 0)~random
-
+	nIters = 5
+	seed = undefined
+	Math.random = (new mersennetwister seed)~random
+	
+	dt = 0.01
 	simulateTrial = (noiseLevel) ->
 		sim = gazeSimulation.SignalSimulator do
 			target: targetGen.generator!
-			duration: targetGen.duration, dt: 0.01
-			dynamics: dynamic.dynamic!
+			duration: targetGen.duration, dt: dt
+			dynamics: dynamic.dynamic dt: dt
 			noise: gazeSimulation.NdNormNoise [noiseLevel]*2
 		sim!
 	{ts, gaze, target, measurement} = simulateTrial noiseLevel
@@ -59,13 +61,28 @@ $ ->
 		..scatter ts, (getDim 0) measurement
 			..classed \measurement-plot, true
 		..xlabel "Time (s)"
+		..ylabel "Horizontal position (degrees)"
+
+	scanpathPlot = mplot.Plot!
+		..plot ...zipAll ...gaze
+			..classed \gaze-plot, true
+		..scatter ...zipAll ...measurement
+			..classed \measurement-plot, true
+		..xlabel "Horizontal position (degrees)"
 		..ylabel "Vertical position (degrees)"
 
 	for {id, name, fitter} in algorithms
 		fit = fitter(noiseLevel: noiseLevel) ts, measurement
-		samplePlot.plot ts, (getDim 0) fit(ts), label: name
+		[x, y] = zipAll ...fit(ts)
+
+		samplePlot.plot ts, x, label: name
 			..classed "recon-#{id}"
+
+		scanpathPlot.plot x, y, label: name
+			..classed "recon-#{id}"
+
 	samplePlot.show $ '#sample-trial-plot'
+	scanpathPlot.show $ '#scanpath-plot'
 
 	rmse = (x, y) ->
 		diffs = nj.sub x, y |> (nj.pow _, 2)

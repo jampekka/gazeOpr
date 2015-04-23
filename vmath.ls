@@ -256,8 +256,10 @@ export
 				result[i] += signal[si] * kernel[offset + mid]
 		return result
 
-	gaussianFilter1d = (...opts) ->
-		kernel = gaussianKernel ...opts
+	gaussianFilter1d = (noiseStd, ...opts) ->
+		kernel = gaussianKernel noiseStd, ...opts
+		if noiseStd == 0
+			return (signal) -> signal.slice()
 		(signal) ->
 			convolve1d signal, kernel
 /*

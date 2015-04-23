@@ -119,3 +119,32 @@ test "Gaussian Smooth", ->
 		..plot ts, xs
 		..plot ts, smoothed
 		..show @
+
+
+test "Optimize smoothing", ->
+	require! './mplot.ls'
+	require! './vmath.ls'
+
+	dt = 0.1
+	ts = [0 to 100 by dt]
+	midt = ts[Math.floor(ts.length/2)]
+	noiseStd = 1
+	require 'script!jStat/dist/jstat.js'
+
+	noiser = -> jStat.normal(0, noiseStd).sample!
+	xs = for t in ts
+		if t < midt
+			0
+		else
+			10
+	signal = map (+ noiser!), xs
+
+	plot = mplot.Plot!
+	bws = [0 to 5 by 0.1]
+	results = for bw in bws
+		result = vmath.gaussianFilter1d(Math.floor(bw/dt)) signal
+		error = vmath.pow (vmath.sub xs, result), 2
+		rmse = vmath.sqrt (vmath.sum error)/result.length
+		Math.exp 1.0/rmse
+	plot.plot bws, results
+	plot.show @
