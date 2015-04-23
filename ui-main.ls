@@ -27,7 +27,7 @@ algorithms = [
 	#* id: \raw, name: "No filtering", fitter: (opts) -> (t, x) -> vm.LinInterp t, x
 
 targets =
-	* {id: \hybrid, name: "Pursuit and saccade", duration: 0.5, generator: gazeSimulation.RandomLinearMovementSimulator}
+	* {id: \hybrid, name: "Pursuit and saccade", duration: 5, generator: gazeSimulation.RandomLinearMovementSimulator}
 	* {id: \singleSaccade, name: "Single saccade", duration: 2, generator: gazeSimulation.StepSimulator}
 	* {id: \singleFixation, name: "Single fixation", duration: 2, generator: -> (dt) -> [0, 0]}
 
@@ -39,7 +39,7 @@ $ ->
 	$ '#tmp-plot' .hide!
 	targetGen = targets[0]
 	dynamic = dynamics[0]
-	noiseLevel = 0.5
+	noiseLevel = 5.0
 	noiseLevels = [1e-3 to 5 by 1]
 	nIters = 5
 	seed = undefined

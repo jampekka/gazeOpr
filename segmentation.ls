@@ -32,8 +32,7 @@ class Pelt
 	measurement: (t, x) ->
 		@_data.ts.push t
 		@_data.xs.push x
-		candidates = filter (.likelihood!?), @hypotheses
-		leader = maximumBy (.likelihood!), candidates
+		leader = @winner!
 		if leader?
 			pruneLimit = leader.minSurvivableLik!
 			@hypotheses = filter ((h) -> not (h.likelihood! <= pruneLimit)), @hypotheses
@@ -47,8 +46,12 @@ class Pelt
 			@measurement ts[i], xs[i]
 		return @reconstruct!
 
+	winner: ->
+		candidates = filter (.likelihood!?), @hypotheses
+		return maximumBy (.likelihood!), candidates
+
 	splits: ->
-		h = maximumBy (.likelihood!), @hypotheses
+		h = @winner!
 		splits = []
 		while h? and h.start?
 			splits.unshift h.start
@@ -56,21 +59,22 @@ class Pelt
 		return splits
 
 	reconstruct: ->
-		# TODO: NO IMPLEMENTATION HERE!
-		NaivePiecewiseLinearFit @splits!, @_data.ts, @_data.xs
+		return @winner!.reconstruct!
 
 
 export NaiveOlp = (noiseStd) ->
-	nDim = noiseStd.length
+	nDim = noiseStd.length ? 1
 	nParam = 2
 	normer = div 1.0, (mul noiseStd, sqrt(2*Math.PI))
-	normer = map Math.log, normer
+	normer = vm.cwiseUnary(Math.log) normer
 	rnormer = div 1.0, (mul 2, (pow noiseStd, 2))
 
 	class Hypothesis
 		(@parent) ->
 			if @parent?
-				@pastLikelihood = @parent.likelihood! + @splitLikelihood!
+				@pastLikelihood = parent.likelihood! + @splitLikelihood!
+				@parent = parent with parent
+				@parent.fit = parent.fit.frozen()
 			else
 				@pastLikelihood = 0
 
@@ -78,10 +82,13 @@ export NaiveOlp = (noiseStd) ->
 
 		measurement: (t, x) ->
 			@start ?= t
+			@end = t
+			@prevX = x
 			@fit.inc t, x
 			@myLikelihood = @fitLikelihood @fit
 
 		likelihood: ->
+			#return undefined if not @continuousWithParent!
 			denan @pastLikelihood + @myLikelihood
 
 		minSurvivableLik: ->
@@ -97,6 +104,18 @@ export NaiveOlp = (noiseStd) ->
 			likelihoods = sub (mul f.n, normer), normedResid
 			return sum likelihoods
 
+		parentCrossing: ->
+			# TODO: N-dimensions!
+			[a1, b1] = @fit.coeffs!
+			[a2, b2] = @parent.fit.coeffs!
+			return (a2 - a1)/(b1 - b2)
+
+		continuousWithParent: ->
+			if not @parent?
+				return true
+			t = @parentCrossing!
+			return (t >= @parent.end) and (t <= @start)
+
 		# Akaikish information criterion.
 		# TODO: Figure out more principled stuff here
 		splitLikelihood: ->
@@ -105,9 +124,26 @@ export NaiveOlp = (noiseStd) ->
 		forks: ->
 			mylik = @likelihood!
 			return [] if not mylik?
-
 			child = new Hypothesis @
+			child.measurement @end, @fit.predict @end
 			return [child]
+
+		reconstruct: ->
+			starts = []
+			fits = []
+			h = @
+			while h?
+				starts.unshift h.start
+				fits.unshift h.fit
+				h = h.parent
+
+			predictOne = (t) ->
+				fit = (vm.searchAscendingLast starts, t) - 1
+				return fits[fit].predict t
+
+			(ts) ->
+				cmap predictOne, ts
+
 
 	return new Pelt new Hypothesis
 

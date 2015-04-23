@@ -33,7 +33,7 @@ cwiseTemplate = (f) -> (a, b) ->
 
 # TODO! Copypasting the stuff here because this brings
 # about 3x speedup as V8 knows how to inline them
-cwise = (f) -> (a, b) ->
+export cwise = (f) -> (a, b) ->
 	as = typeof a != 'object'
 	bs = typeof b != 'object'
 	switch
@@ -90,7 +90,7 @@ cwise5 = (f) -> (a, b) ->
 	| _ => [f(a[i], b[i]) for i from 0 til a.length]
 
 
-cwiseUnary = (f) -> (xs) ->
+export cwiseUnary = (f) -> (xs) ->
 	| isScalar xs => f xs
 	| _ => [f x for x in xs]
 
@@ -221,6 +221,12 @@ export
 
 			for t in ts
 				add a, (mul b, t)
+
+		frozen: ->
+			copy = @ with @
+			copy.t = @t with @t
+			copy.x = @x with @x
+			return copy
 
 	gaussianPdf1d = (std) ->
 		normer = 1/(std*Math.sqrt(Math.PI*2))

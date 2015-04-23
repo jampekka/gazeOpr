@@ -147,4 +147,34 @@ test "Optimize smoothing", ->
 		rmse = vmath.sqrt (vmath.sum error)/result.length
 		Math.exp 1.0/rmse
 	plot.plot bws, results
-	plot.show @
+	plot.show $("<plot-area>").appendTo @
+
+test "Nolp", ->
+	require! './mplot.ls'
+	require! './vmath.ls'
+	{NaiveOlp} = require './segmentation.ls'
+
+	dt = 0.1
+	ts = [0 to 10 by dt]
+	midt = ts[Math.floor(ts.length/2)]
+	noiseStd = 1
+	require 'script!jStat/dist/jstat.js'
+
+	noiser = -> jStat.normal(0, noiseStd).sample!
+	xs = for t in ts
+		if t < midt
+			0
+		else
+			10
+	signal = map (+ noiser!), xs
+
+	nolp = NaiveOlp noiseStd
+	fit = nolp.fit ts, signal
+
+	mplot.Plot!
+		..scatter ts, signal
+			..classed \measurement-plot, true
+		..plot ts, xs
+			..classed \gaze-plot, true
+		..plot ts, fit ts
+		..show $("<plot-area>").appendTo @
