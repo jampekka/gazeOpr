@@ -1,1 +1,1 @@
-# Gaze signal segmentation based on optimal linear segmentation
+# Gaze signal operationalization based on optimal linear segmentation
